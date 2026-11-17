@@ -1,0 +1,101 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: linkguard_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-linkguard}
+      POSTGRES_USER: ${POSTGRES_USER:-linkguard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-linkguard_secret_pwd}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-linkguard}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: linkguard_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: linkguard_backend
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-secret-change-in-prod}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-1}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      POSTGRES_DB: ${POSTGRES_DB:-linkguard}
+      POSTGRES_USER: ${POSTGRES_USER:-linkguard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-linkguard_secret_pwd}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:80}
+      GOOGLE_SAFE_BROWSING_KEY: ${GOOGLE_SAFE_BROWSING_KEY:-}
+      VIRUSTOTAL_KEY: ${VIRUSTOTAL_KEY:-}
+      URLHAUS_KEY: ${URLHAUS_KEY:-}
+      PHISHTANK_KEY: ${PHISHTANK_KEY:-}
+      PROVIDER_TIMEOUT: ${PROVIDER_TIMEOUT:-6}
+      ALLOW_DIRECT_PROBE: ${ALLOW_DIRECT_PROBE:-0}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: linkguard_celery
+    restart: unless-stopped
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - ./backend:/app
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-secret-change-in-prod}
+      DJANGO_DEBUG: 0
+      POSTGRES_DB: ${POSTGRES_DB:-linkguard}
+      POSTGRES_USER: ${POSTGRES_USER:-linkguard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-linkguard_secret_pwd}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      GOOGLE_SAFE_BROWSING_KEY: ${GOOGLE_SAFE_BROWSING_KEY:-}
+      VIRUSTOTAL_KEY: ${VIRUSTOTAL_KEY:-}
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: linkguard_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+
