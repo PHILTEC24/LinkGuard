@@ -26,31 +26,37 @@ class ScanCreateView(generics.CreateAPIView):
         return super().get_throttles()
 
     def create(self, request):
-        ser = self.get_serializer(data=request.data)
-        ser.is_valid(raise_exception=True)
-        raw = ser.validated_data["url"]
-        is_async = ser.validated_data.get("async_scan", False)
-
-        # Reject unsafe URLs before creating a row
         try:
-            normalize_and_validate(raw)
-        except URLValidationError as e:
-            return Response(
-                {"detail": str(e), "code": getattr(e, "code", "invalid")},
-                status=status.HTTP_400_BAD_REQUEST,
+            ser = self.get_serializer(data=request.data)
+            ser.is_valid(raise_exception=True)
+            raw = ser.validated_data["url"]
+            is_async = ser.validated_data.get("async_scan", False)
+
+            # Reject unsafe URLs before creating a row
+            try:
+                normalize_and_validate(raw)
+            except URLValidationError as e:
+                return Response(
+                    {"detail": str(e), "code": getattr(e, "code", "invalid")},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            scan = Scan.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                original_url=raw,
             )
 
-        scan = Scan.objects.create(
-            user=request.user if request.user.is_authenticated else None,
-            original_url=raw,
-        )
+            if is_async:
+                execute_scan_task.delay(str(scan.id))
+                return Response(ScanSerializer(scan).data, status=status.HTTP_202_ACCEPTED)
 
-        if is_async:
-            execute_scan_task.delay(str(scan.id))
-            return Response(ScanSerializer(scan).data, status=status.HTTP_202_ACCEPTED)
-
-        run_scan(scan)
-        return Response(ScanSerializer(scan).data, status=status.HTTP_201_CREATED)
+            run_scan(scan)
+            return Response(ScanSerializer(scan).data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response(
+                {"detail": f"Scan processing failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class ScanDetailView(generics.RetrieveAPIView):
