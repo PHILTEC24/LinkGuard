@@ -9,12 +9,9 @@ venv/
 ENV/
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
@@ -24,6 +21,9 @@ wheels/
 *.egg
 db.sqlite3
 staticfiles/
+
+# Keep frontend lib
+!frontend/src/lib/
 
 # Node
 node_modules/
