@@ -25,6 +25,7 @@ def api_root(request):
     })
 
 urlpatterns = [
+    path("", api_root, name="home-root"),
     path("admin/", admin.site.urls),
     path("api/", api_root, name="api-root"),
     # Authentication endpoints
