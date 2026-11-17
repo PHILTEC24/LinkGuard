@@ -19,11 +19,7 @@ class ScanCreateView(generics.CreateAPIView):
     """
     serializer_class = ScanCreateSerializer
     permission_classes = [AllowAny]
-    throttle_classes = [ScopedRateThrottle]
-
-    def get_throttles(self):
-        self.throttle_scope = "scan" if self.request.user.is_authenticated else "scan_anon"
-        return super().get_throttles()
+    throttle_classes = []
 
     def create(self, request):
         try:
