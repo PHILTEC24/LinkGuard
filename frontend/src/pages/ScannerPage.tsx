@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, Loader2, AlertTriangle, ExternalLink, Info } from "lucide-react";
-import { api } from "../lib/api";
+import { ShieldCheck, Loader2, AlertTriangle, ExternalLink, Info, Server } from "lucide-react";
+import { api, getApiBaseUrl, setApiBaseUrl } from "../lib/api";
 import type { Scan } from "../types";
 import { RiskGauge } from "../components/RiskGauge";
 import { ScanProgress } from "../components/ScanProgress";
@@ -11,6 +11,8 @@ export function ScannerPage() {
   const [stage, setStage] = useState(-1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [backendInput, setBackendInput] = useState("");
+  const [savedUrl, setSavedUrl] = useState(getApiBaseUrl());
 
   useEffect(() => {
     if (!loading) return;
@@ -83,10 +85,41 @@ export function ScannerPage() {
       )}
 
       {error && (
-        <div className="mt-6 flex items-start gap-3 rounded-xl bg-red-950/50 border border-red-800 p-4 text-red-200">
-          <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
-          <div>
-            <strong>Could not scan:</strong> {error}
+        <div className="mt-6 rounded-xl bg-red-950/50 border border-red-800 p-4 text-red-200">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <strong>Could not scan:</strong> {error}
+              <div className="mt-3 pt-3 border-t border-red-900/60 text-xs text-slate-300">
+                <p className="mb-2 flex items-center gap-1.5 font-medium text-slate-300">
+                  <Server className="h-3.5 w-3.5 text-cyan-400" /> Current Backend API:
+                  <code className="bg-navy-900 px-1.5 py-0.5 rounded text-cyan-300 break-all font-mono">
+                    {savedUrl}
+                  </code>
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                  <input
+                    value={backendInput}
+                    onChange={(e) => setBackendInput(e.target.value)}
+                    placeholder="e.g. https://linkguard-backend.onrender.com"
+                    className="flex-1 bg-navy-900 text-slate-100 placeholder-slate-500 rounded-lg px-3 py-2 text-xs outline-none border border-navy-700 focus:ring-1 focus:ring-cyan-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (backendInput.trim()) {
+                        setApiBaseUrl(backendInput.trim());
+                        setSavedUrl(getApiBaseUrl());
+                        setError("");
+                      }
+                    }}
+                    className="bg-cyan-500 hover:bg-cyan-400 text-navy-900 font-semibold px-4 py-2 rounded-lg text-xs transition cursor-pointer"
+                  >
+                    Save & Reconnect
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
