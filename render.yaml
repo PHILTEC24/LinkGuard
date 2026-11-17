@@ -47,8 +47,7 @@ services:
         fromService:
           type: web
           name: linkguard-backend
-          property: host
-          valueFormat: "https://{host}/api"
+          envVarKey: RENDER_EXTERNAL_URL
 
 # ---------------------------------------------------------
 # 3. PostgreSQL Database

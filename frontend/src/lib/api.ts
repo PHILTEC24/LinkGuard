@@ -1,6 +1,8 @@
 import type { Scan } from "../types";
 
-const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
+const rawBase = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const cleanBase = rawBase.replace(/\/+$/, "");
+const BASE = cleanBase.endsWith("/api") ? cleanBase : `${cleanBase}/api`;
 
 function authHeader(): Record<string, string> {
   const token = localStorage.getItem("lg_access");
@@ -8,11 +10,22 @@ function authHeader(): Record<string, string> {
 }
 
 async function handle<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail ?? `Request failed (${res.status})`);
+  const text = await res.text();
+  let body: Record<string, unknown> = {};
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    // Non-JSON response
   }
-  return res.json() as Promise<T>;
+
+  if (!res.ok) {
+    const errorMsg =
+      (body.detail as string) ||
+      (text ? text.slice(0, 150) : `Request failed (${res.status})`);
+    throw new Error(errorMsg);
+  }
+
+  return body as unknown as T;
 }
 
 export const api = {
