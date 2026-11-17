@@ -28,11 +28,9 @@ services:
   # ---------------------------------------------------------
   # 2. React + Vite Frontend (Static Site)
   # ---------------------------------------------------------
-  - type: web
+  - type: static
     name: linkguard-frontend
-    runtime: static
     rootDir: frontend
-    plan: free
     buildCommand: "npm install && npm run build"
     staticPublishPath: dist
     routes:
@@ -48,7 +46,7 @@ services:
           valueFormat: "https://{host}/api"
 
 # ---------------------------------------------------------
-# 3. PostgreSQL Database (Free Tier)
+# 3. PostgreSQL Database
 # ---------------------------------------------------------
 databases:
   - name: linkguard-db
