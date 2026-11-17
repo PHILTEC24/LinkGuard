@@ -26,10 +26,11 @@ services:
         value: "0"
 
   # ---------------------------------------------------------
-  # 2. React + Vite Frontend (Static Site)
+  # 2. React + Vite Frontend (Static Site via CDN)
   # ---------------------------------------------------------
-  - type: static
+  - type: web
     name: linkguard-frontend
+    runtime: static
     rootDir: frontend
     buildCommand: "npm install && npm run build"
     staticPublishPath: dist
